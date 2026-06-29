@@ -31,8 +31,8 @@ dependency on each other**, and are **AFK** (no HITL). Run as two parallel branc
 
 | Item | Suggested branch | PRD | Type | Blocked by | Status |
 |---|---|---|---|---|---|
-| **AR-1 — `.map` schema module** | `feat/map-schema-module` | `prds/in-progress/ar-1-map-schema-module.md` (sliced: 3 AFK slices) | AFK | none | 🟡 sliced, not impl |
-| **AR-6 — type the `grid` global** | `feat/type-grid-global` | `prds/backlog/ar-6-type-grid-global.md` (sliced: 1 AFK slice) | AFK | none | ⬜ ready to impl |
+| **AR-1 — `.map` schema module** | `feat/map-schema-module` | `prds/finished/ar-1-map-schema-module.md` (3 AFK slices) | AFK | none | ✅ merged |
+| **AR-6 — type the `grid` global** | `feat/type-grid-global` | `prds/finished/ar-6-type-grid-global.md` (1 AFK slice) | AFK | none | ✅ merged |
 
 **Notes:** AR-1 hardens the serialization contract the new UI reads through; AR-6 types the
 second world graph. Both branch from `master` after Wave 0 merges (or from

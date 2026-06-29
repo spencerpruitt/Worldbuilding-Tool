@@ -2,7 +2,7 @@
 
 > **Source:** Architecture review finding [AR-6](../../architecture-review-results/README.md#ar-6--type-the-grid-global--strong-small--survives-re-platform).
 > **Direction:** [ADR-0002](../../adr/adr-0002-ui-replatform-react-webgl.md) — stack-independent; scheduled right after AR-1.
-> **Status:** Backlog.
+> **Status:** Done (merged to `master`).
 
 ## Problem Statement
 
@@ -96,7 +96,7 @@ Single **AFK** slice — pure types groundwork, no visual/runtime component; the
 acceptance proof.
 
 ### Slice 1 — `GridGraph` interface + retype `var grid`  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: none
 - User stories: 1, 2, 3, 4, 5, 6
 
@@ -108,11 +108,11 @@ reusing shared types. Change `var grid: any` → `var grid: GridGraph`. Resolve 
 test as a separate labeled commit.
 
 **Acceptance criteria:**
-- [ ] `src/types/global.ts` declares `var grid: GridGraph` (no `any`).
-- [ ] `GridGraph` covers every field accessed on the global grid graph; no field is left implicitly `any`.
-- [ ] No `as any` / `@ts-ignore` was added to silence grid typing errors.
-- [ ] Shadowed local `grid` variables (d3/DOM) are left untouched and are not part of `GridGraph`.
-- [ ] `npm run build` (`tsc`) and `npm run test` both pass; no runtime behavior change.
+- [x] `src/types/global.ts` declares `var grid: GridGraph` (no `any`).
+- [x] `GridGraph` covers every field accessed on the global grid graph; no field is left implicitly `any`.
+- [x] No `as any` / `@ts-ignore` was added to silence grid typing errors.
+- [x] Shadowed local `grid` variables (d3/DOM) are left untouched and are not part of `GridGraph`.
+- [x] `npm run build` (`tsc`) and `npm run test` both pass; no runtime behavior change.
 
 > **Optional split** if retyping surfaces a large error count: do `grid.cells` (the typed arrays,
 > highest-traffic) first, then grid-level fields. Only split if the single slice proves unwieldy.

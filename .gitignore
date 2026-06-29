@@ -12,3 +12,5 @@
 /memory
 .github/agents/bmad-*
 .github/prompts/bmad-*
+# Private/local docs (see docs/private/README.md)
+docs/private/
