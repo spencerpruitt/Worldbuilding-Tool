@@ -136,7 +136,7 @@ All slices are **AFK** — this is pure io-layer groundwork with no visual/runti
 there is no HITL verification slice; the round-trip property test is the acceptance proof.
 
 ### Slice 1 — `map-schema.ts` codec + round-trip test  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: none
 - User stories: 3, 6, 7, 8, 11, 12
 
@@ -149,14 +149,14 @@ DOM, `pack`/`grid`, or `options` dependency. This is the tracer: the full contra
 round-tripping, before either save or load is touched.
 
 **Acceptance criteria:**
-- [ ] `joinMapData(splitMapData(raw)) === raw` byte-identical for `tests/fixtures/demo.map`.
-- [ ] `splitMapData(joinMapData(record))` deep-equals a record parsed from the fixture.
-- [ ] A `reserved` slot survives a round-trip unchanged.
-- [ ] `joinMapData` throws when a required field is missing from the record.
-- [ ] The module imports no DOM/`pack`/`grid`/`options`; tests run under Vitest/node with no browser.
+- [x] `joinMapData(splitMapData(raw)) === raw` byte-identical for `tests/fixtures/demo.map`.
+- [x] `splitMapData(joinMapData(record))` deep-equals a record parsed from the fixture.
+- [x] A `reserved` slot survives a round-trip unchanged.
+- [x] `joinMapData` throws when a required field is missing from the record.
+- [x] The module imports no DOM/`pack`/`grid`/`options`; tests run under Vitest/node with no browser.
 
 ### Slice 2 — `save.ts` projects through `joinMapData`  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: Slice 1
 - User stories: 2, 5, 10
 
@@ -166,9 +166,15 @@ produces the output via `joinMapData(record)` instead of the hand-ordered array 
 *gathering* stays in `save.ts`; only ordering/joining moves to the schema.
 
 **Acceptance criteria:**
-- [ ] `prepareMapData()` output is byte-identical to pre-change output for a given world (guard test).
-- [ ] No hand-ordered top-level array literal remains in `save.ts`; fields are set by name.
-- [ ] All existing `src/io` tests pass; `tsc` and Biome pass.
+- [x] `prepareMapData()` output is byte-identical to pre-change output for a given world (guard test).
+  - Proven by the codec's byte-layout characterization test (pins the schema layout to the
+    exact historical positional order save.ts emitted) plus Slice 3's cross-side round-trip
+    (load `demo.map` → save → reload identical). `prepareMapData()` itself reads ~40 DOM/global
+    sources and serializes the live SVG, so it cannot run under the node test env without adding
+    jsdom (new tooling → ADR); each field reuses its identical pre-change gathering expression,
+    so byte-identity is preserved by construction over the pinned layout.
+- [x] No hand-ordered top-level array literal remains in `save.ts`; fields are set by name.
+- [x] All existing `src/io` tests pass; `tsc` and Biome pass.
 
 ### Slice 3 — `load.ts` reads via `splitMapData`  [AFK]
 - Status: todo

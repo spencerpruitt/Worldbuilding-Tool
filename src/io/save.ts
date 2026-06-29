@@ -1,6 +1,7 @@
 // Save the whole .map project to storage, machine or cloud
 import { lazy } from "@/lazy-loaders";
 import { ensureEl, link, parseError, rn } from "@/utils";
+import { joinMapData, type MapRecord } from "./map-schema";
 import { type SaveOutcome, saveToFileSystem } from "./save-to-file";
 
 type SaveMethod = "storage" | "machine" | "dropbox";
@@ -42,44 +43,60 @@ export async function saveMap(method: SaveMethod): Promise<void> {
 }
 
 export function prepareMapData(): string {
+  // Serialize a numeric cell array to its comma-joined form. The legacy array
+  // layout relied on Array.join's implicit coercion of typed arrays; doing it
+  // explicitly per field is clearer and keeps the bytes identical.
+  const toCsv = (cells: { join(separator: string): string }): string => cells.join(",");
+
   const date = new Date();
   const dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   const license = "File can be loaded in azgaar.github.io/Fantasy-Map-Generator";
-  const params = [VERSION, license, dateString, seed, graphWidth, graphHeight, mapId].join("|");
-  const settings = [
-    distanceUnitInput.value,
-    distanceScale,
-    areaUnit.value,
-    heightUnit.value,
-    heightExponentInput.value,
-    temperatureScale.value,
-    "", // previously used for barSize.value
-    "", // previously used for barLabel.value
-    "", // previously used for barBackColor.value
-    "", // previously used for barBackColor.value
-    "", // previously used for barPosX.value
-    "", // previously used for barPosY.value
-    populationRate,
-    urbanization,
-    mapSizeOutput.value,
-    latitudeOutput.value,
-    "", // previously used for temperatureEquatorOutput.value
-    "", // previously used for tempNorthOutput.value
-    precOutput.value,
-    JSON.stringify(options),
-    mapName.value,
-    +hideLabels.checked,
-    stylePreset.value,
-    +rescaleLabels.checked,
-    urbanDensity,
-    longitudeOutput.value,
-    ensureEl<HTMLInputElement>("growthRate").value
-  ].join("|");
-  const coords = JSON.stringify(mapCoordinates);
-  const biomes = [biomesData.color, biomesData.habitability, biomesData.name].join("|");
-  const notesData = JSON.stringify(notes);
-  const rulersString = rulers.toString();
-  const fonts = JSON.stringify(getUsedFonts(svg.node()!));
+
+  const params: MapRecord["params"] = {
+    version: String(VERSION),
+    license,
+    date: dateString,
+    seed: String(seed),
+    graphWidth: String(graphWidth),
+    graphHeight: String(graphHeight),
+    mapId: String(mapId)
+  };
+
+  const settings: MapRecord["settings"] = {
+    distanceUnit: distanceUnitInput.value,
+    distanceScale: String(distanceScale),
+    areaUnit: areaUnit.value,
+    heightUnit: heightUnit.value,
+    heightExponent: heightExponentInput.value,
+    temperatureScale: temperatureScale.value,
+    reservedBarSize: "", // previously barSize.value
+    reservedBarLabel: "", // previously barLabel.value
+    reservedBarBackColor1: "", // previously barBackColor.value
+    reservedBarBackColor2: "", // previously barBackColor.value
+    reservedBarPosX: "", // previously barPosX.value
+    reservedBarPosY: "", // previously barPosY.value
+    populationRate: String(populationRate),
+    urbanization: String(urbanization),
+    mapSize: mapSizeOutput.value,
+    latitude: latitudeOutput.value,
+    reservedTemperatureEquator: "", // previously temperatureEquatorOutput.value
+    reservedTemperatureNorth: "", // previously tempNorthOutput.value
+    prec: precOutput.value,
+    options: JSON.stringify(options),
+    mapName: mapName.value,
+    hideLabels: String(+hideLabels.checked),
+    stylePreset: stylePreset.value,
+    rescaleLabels: String(+rescaleLabels.checked),
+    urbanDensity: String(urbanDensity),
+    longitude: longitudeOutput.value,
+    growthRate: ensureEl<HTMLInputElement>("growthRate").value
+  };
+
+  const biomes: MapRecord["biomes"] = {
+    color: toCsv(biomesData.color),
+    habitability: toCsv(biomesData.habitability),
+    name: toCsv(biomesData.name)
+  };
 
   // save svg
   const cloneEl = ensureEl("map").cloneNode(true) as SVGSVGElement;
@@ -98,21 +115,6 @@ export function prepareMapData(): string {
 
   const { spacing, cellsX, cellsY, boundary, points, features, cellsDesired } = grid;
   const gridGeneral = JSON.stringify({ spacing, cellsX, cellsY, boundary, points, features, cellsDesired });
-  const packFeatures = JSON.stringify(pack.features);
-  const cultures = JSON.stringify(pack.cultures);
-  const states = JSON.stringify(pack.states);
-  const burgs = JSON.stringify(pack.burgs);
-  const religions = JSON.stringify(pack.religions);
-  const provinces = JSON.stringify(pack.provinces);
-  const rivers = JSON.stringify(pack.rivers);
-  const markers = JSON.stringify(pack.markers);
-  const cellRoutes = JSON.stringify(pack.cells.routes);
-  const routes = JSON.stringify(pack.routes);
-  const zones = JSON.stringify(pack.zones);
-  const ice = JSON.stringify(pack.ice);
-  const goods = JSON.stringify(pack.goods);
-  const markets = JSON.stringify(pack.markets || []);
-  const deals = JSON.stringify(pack.deals || []);
 
   // store custom good icons
   const goodIconsEl = ensureEl("good-icons");
@@ -123,66 +125,66 @@ export function prepareMapData(): string {
 
   // store name array only if not the same as default
   const defaultNB = Names.getNameBases();
-  const namesData = nameBases
-    .map((b, i) => {
-      const names = defaultNB[i] && defaultNB[i].b === b.b ? "" : b.b;
-      return `${b.name}|${b.min}|${b.max}|${b.d}|${b.m}|${names}`;
-    })
-    .join("/");
+  const namesData: MapRecord["namesData"] = nameBases.map((b, i) => {
+    const names = defaultNB[i] && defaultNB[i].b === b.b ? "" : b.b;
+    return { name: String(b.name), min: String(b.min), max: String(b.max), d: String(b.d), m: String(b.m), names };
+  });
 
   // round population to save space
   const pop = Array.from(pack.cells.pop).map(p => rn(p, 4));
 
-  // data format as below
-  const mapData = [
+  // Assemble the named record; the schema owns the positional layout. Deprecated
+  // top-level slots (pack.cells.road / crossroad) are kept as named reserved "".
+  const record: MapRecord = {
     params,
     settings,
-    coords,
+    coords: JSON.stringify(mapCoordinates),
     biomes,
-    notesData,
-    serializedSVG,
+    notes: JSON.stringify(notes),
+    svg: serializedSVG,
     gridGeneral,
-    grid.cells.h,
-    grid.cells.prec,
-    grid.cells.f,
-    grid.cells.t,
-    grid.cells.temp,
-    packFeatures,
-    cultures,
-    states,
-    burgs,
-    pack.cells.biome,
-    pack.cells.burg,
-    pack.cells.conf,
-    pack.cells.culture,
-    pack.cells.fl,
-    pop,
-    pack.cells.r,
-    [], // deprecated pack.cells.road
-    pack.cells.s,
-    pack.cells.state,
-    pack.cells.religion,
-    pack.cells.province,
-    [], // deprecated pack.cells.crossroad
-    religions,
-    provinces,
+    gridCellsH: toCsv(grid.cells.h),
+    gridCellsPrec: toCsv(grid.cells.prec),
+    gridCellsF: toCsv(grid.cells.f),
+    gridCellsT: toCsv(grid.cells.t),
+    gridCellsTemp: toCsv(grid.cells.temp),
+    packFeatures: JSON.stringify(pack.features),
+    cultures: JSON.stringify(pack.cultures),
+    states: JSON.stringify(pack.states),
+    burgs: JSON.stringify(pack.burgs),
+    cellsBiome: toCsv(pack.cells.biome),
+    cellsBurg: toCsv(pack.cells.burg),
+    cellsConf: toCsv(pack.cells.conf),
+    cellsCulture: toCsv(pack.cells.culture),
+    cellsFl: toCsv(pack.cells.fl),
+    cellsPop: toCsv(pop),
+    cellsR: toCsv(pack.cells.r),
+    reservedRoad: "", // deprecated pack.cells.road
+    cellsS: toCsv(pack.cells.s),
+    cellsState: toCsv(pack.cells.state),
+    cellsReligion: toCsv(pack.cells.religion),
+    cellsProvince: toCsv(pack.cells.province),
+    reservedCrossroad: "", // deprecated pack.cells.crossroad
+    religions: JSON.stringify(pack.religions),
+    provinces: JSON.stringify(pack.provinces),
     namesData,
-    rivers,
-    rulersString,
-    fonts,
-    markers,
-    cellRoutes,
-    routes,
-    zones,
-    ice,
-    pack.cells.good,
-    goods,
-    markets,
-    deals,
-    pack.cells.market,
+    rivers: JSON.stringify(pack.rivers),
+    rulers: rulers.toString(),
+    fonts: JSON.stringify(getUsedFonts(svg.node()!)),
+    markers: JSON.stringify(pack.markers),
+    cellRoutes: JSON.stringify(pack.cells.routes),
+    routes: JSON.stringify(pack.routes),
+    zones: JSON.stringify(pack.zones),
+    ice: JSON.stringify(pack.ice),
+    cellsGood: toCsv(pack.cells.good),
+    goods: JSON.stringify(pack.goods),
+    markets: JSON.stringify(pack.markets || []),
+    deals: JSON.stringify(pack.deals || []),
+    cellsMarket: toCsv(pack.cells.market),
     customGoodIcons
-  ].join("\r\n");
-  return mapData;
+  };
+
+  return joinMapData(record);
 }
 
 // save map file to indexedDB
