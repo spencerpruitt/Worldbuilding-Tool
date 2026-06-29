@@ -521,7 +521,7 @@ function updateMeshCells(clone: MapSelection): void {
   clone
     .select("#heights")
     .selectAll("polygon")
-    .data(data as number[])
+    .data(data)
     .join("polygon")
     .attr("points", (d: number) => getGridPolygon(d, grid))
     .attr("id", (d: number) => `cell${d}`)

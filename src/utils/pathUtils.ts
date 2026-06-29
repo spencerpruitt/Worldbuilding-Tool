@@ -1,5 +1,6 @@
 import polylabel from "polylabel";
 import type { Point, Vertices } from "../generators/voronoi";
+import type { GridGraph } from "../types/GridGraph";
 import type { PackedGraph } from "../types/PackedGraph";
 import { rn } from "./numberUtils";
 
@@ -82,7 +83,7 @@ const restorePath = (exit: number, start: number, from: number[]): number[] => {
  * @returns {object} An object containing isolines for each type based on the specified options.
  */
 export const getIsolines = (
-  { cells, vertices, features }: PackedGraph,
+  { cells, vertices, features }: PackedGraph | GridGraph,
   getType: (cellId: number) => string | number | null,
   options: {
     polygons?: boolean;
@@ -119,7 +120,8 @@ export const getIsolines = (
 
     // check if inner lake. Note there is no shoreline for grid features
     const feature = features[cells.f[onborderCell]];
-    if (feature.type === "lake" && feature.shoreline?.every(ofSameType)) continue;
+    const shoreline = "shoreline" in feature ? feature.shoreline : undefined;
+    if (feature.type === "lake" && shoreline?.every(ofSameType)) continue;
 
     const startingVertex = cells.v[cellId].find((v: number) => vertices.c[v].some(ofDifferentType));
     if (startingVertex === undefined) throw new Error(`Starting vertex for cell ${cellId} is not found`);

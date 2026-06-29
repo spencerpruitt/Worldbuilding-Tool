@@ -2,7 +2,8 @@ import Alea from "alea";
 import { color, quadtree } from "d3";
 import Delaunator from "delaunator";
 import { type Cells, type Point, type Vertices, Voronoi } from "../generators/voronoi";
-import type { PackedGraph } from "../types/PackedGraph";
+import type { GridGraph } from "../types/GridGraph";
+import type { TypedArray } from "../types/PackedGraph";
 import { createTypedArray } from "./arrayUtils";
 import { ensureEl } from "./nodeUtils";
 import { rn } from "./numberUtils";
@@ -118,22 +119,17 @@ export const shouldRegenerateGrid = (grid: any, expectedSeed: number, graphWidth
   return grid.spacing !== newSpacing || grid.cellsX !== newCellsX || grid.cellsY !== newCellsY;
 };
 
-interface Grid {
-  spacing: number;
-  cellsDesired: number;
-  boundary: Point[];
-  points: Point[];
-  cellsX: number;
-  cellsY: number;
-  seed: string | number;
-  cells: Cells;
-  vertices: Vertices;
-}
 /**
  * Generates a Voronoi grid based on jittered grid points
  * @returns {Object} - The generated grid object containing spacing, cellsDesired, boundary, points, cellsX, cellsY, cells, vertices, and seed
+ *
+ * The returned graph is asserted as a fully-formed {@link GridGraph}: the
+ * per-cell typed arrays (`cells.h`/`t`/`f`/`prec`/`temp`) and `features` are
+ * populated by the heightmap, features, and climate generators that run after
+ * this bare Voronoi graph is built (the same staged-construction pattern `pack`
+ * uses with `{} as PackedGraph`).
  */
-export const generateGrid = (seed: string, graphWidth: number, graphHeight: number): Grid => {
+export const generateGrid = (seed: string, graphWidth: number, graphHeight: number): GridGraph => {
   Math.random = Alea(seed); // reset PRNG
   const { spacing, cellsDesired, boundary, points, cellsX, cellsY } = placePoints(graphWidth, graphHeight);
   const { cells, vertices } = calculateVoronoi(points, boundary);
@@ -147,7 +143,7 @@ export const generateGrid = (seed: string, graphWidth: number, graphHeight: numb
     cells,
     vertices,
     seed
-  };
+  } as GridGraph;
 };
 
 /**
@@ -473,8 +469,8 @@ export function* poissonDiscSampler(x0: number, y0: number, x1: number, y1: numb
  * @param {number} i - The index of the packed cell
  * @returns {boolean} - True if the cell is land, false otherwise
  */
-export const isLand = (i: number, packedGraph: PackedGraph) => {
-  return packedGraph.cells.h[i] >= 20;
+export const isLand = (i: number, graph: { cells: { h: TypedArray } }) => {
+  return graph.cells.h[i] >= 20;
 };
 
 /**
@@ -482,8 +478,8 @@ export const isLand = (i: number, packedGraph: PackedGraph) => {
  * @param {number} i - The index of the packed cell
  * @returns {boolean} - True if the cell is water, false otherwise
  */
-export const isWater = (i: number, packedGraph: PackedGraph) => {
-  return packedGraph.cells.h[i] < 20;
+export const isWater = (i: number, graph: { cells: { h: TypedArray } }) => {
+  return graph.cells.h[i] < 20;
 };
 
 // draw raster heightmap preview (not used in main generation)

@@ -3,12 +3,13 @@ import type { GoodsModule } from "../generators/goods-generator";
 import type { MarketsModule } from "../generators/markets-generator";
 import type { NameBase } from "../generators/names-generator";
 import type { ProductionModule } from "../generators/production-generator";
+import type { GridGraph } from "./GridGraph";
 import type { PackedGraph } from "./PackedGraph";
 
 declare global {
   var seed: string;
   var pack: PackedGraph;
-  var grid: any;
+  var grid: GridGraph;
   var graphHeight: number;
   var graphWidth: number;
   var TIME: boolean;

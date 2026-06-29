@@ -147,7 +147,7 @@ class FeatureModule {
     });
     grid.cells.t = distanceField;
     grid.cells.f = featureIds;
-    grid.features = [0, ...features];
+    grid.features = [0 as unknown as GridFeature, ...features];
 
     TIME && console.timeEnd("markupGrid");
   }

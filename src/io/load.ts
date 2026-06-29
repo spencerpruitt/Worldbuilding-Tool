@@ -419,7 +419,9 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
     {
       grid = JSON.parse(record.gridGeneral);
       const { cells, vertices } = calculateVoronoi(grid.points, grid.boundary);
-      grid.cells = cells;
+      // `cells` is the bare Voronoi graph; the per-cell typed arrays are added
+      // from the saved record on the lines below, matching GridGraph's shape.
+      grid.cells = cells as typeof grid.cells;
       grid.vertices = vertices;
       grid.cells.h = Uint8Array.from(record.gridCellsH.split(","), Number);
       grid.cells.prec = Uint8Array.from(record.gridCellsPrec.split(","), Number);
