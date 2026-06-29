@@ -11,6 +11,14 @@ When weighing a change, favor the direction these goals imply; expect the archit
 
 Before making architectural decisions, read `docs/context.md` (project overview) and `docs/architecture/original-architecture.md` (a quick map of the current stack and subsystems — the baseline this fork starts from). For deeper knowledge, consult `ARCHITECTURE.md` (the FMG 2.0 target architecture), `KEYTERMS.md` (domain vocabulary), `docs/architecture/data_model.md`, and the decision records in `docs/adr/`.
 
+## Pull request messages
+
+When the user instructs an agent to merge to main (`master`), write a straightforward PR message in the user's style:
+
+- No em-dashes.
+- Plain language wherever possible; avoid jargon and filler.
+- Direct and to the point. State what the change does and why, without padding.
+
 ## Security review
 
 Security review is **invoked manually by the user**, not run automatically by agents. Do **not** launch the `/security-review` skill as part of the Review phase — even for changes that touch input handling, serialization, or filesystem I/O (which CLAUDE.md's default Review checklist would otherwise flag). The `/code-review` skill still runs as usual at Review; the user will run `/security-review` themselves when they want it.
