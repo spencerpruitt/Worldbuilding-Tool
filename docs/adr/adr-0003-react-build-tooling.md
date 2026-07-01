@@ -10,7 +10,7 @@
 lint/format config (`biome.json`), the browser test runner (`vitest.browser.config.ts`), a new
 `src/ui/` source subtree, and `package.json` dependencies. Implements
 [ADR-0002](./adr-0002-ui-replatform-react-webgl.md) and the
-[replatform-foundation PRD](../prds/backlog/replatform-foundation.md) Phase 0.
+[replatform-foundation PRD](../prds/in-progress/replatform-foundation.md) Phase 0.
 
 ## Context
 

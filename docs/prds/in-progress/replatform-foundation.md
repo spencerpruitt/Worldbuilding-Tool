@@ -258,7 +258,7 @@ unless noted.
   Vitest-browser + Biome `.tsx` are recorded and accepted.
 
 ### Slice 2 — React in the build; app-wide root boots empty  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: Slice 1
 - User stories: 1, 7, 13, 16
 
@@ -267,10 +267,10 @@ mount one `#react-root` at boot rendering an empty `<App>` (Minimal shell, zero 
 existing app is otherwise untouched.
 
 **Acceptance criteria:**
-- [ ] App builds and boots with React mounted; no visual/behavioral change to the legacy app.
-- [ ] Existing e2e suite passes; a boot e2e asserts the React root is present.
-- [ ] `.map` save/load round-trip is byte-identical to pre-change (regression gate).
-- [ ] `biome check` and `tsc` pass with `.tsx` support enabled.
+- [x] App builds and boots with React mounted; no visual/behavioral change to the legacy app.
+- [x] Existing e2e suite passes; a boot e2e asserts the React root is present.
+- [x] `.map` save/load round-trip is byte-identical to pre-change (regression gate).
+- [x] `biome check` and `tsc` pass with `.tsx` support enabled.
 
 ### Slice 3 — Compare Prices opens/closes as a React surface (skeleton) through the preserved seam  [AFK]
 - Status: todo

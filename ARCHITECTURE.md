@@ -232,10 +232,16 @@ home.
 | `src/utils/`       | —                  | pure, dependency-free helpers                                  |
 | `src/generators/`  | Generators (Model) | procedural generators & domain logic (`Goods`, `Markets`, …)   |
 | `src/renderers/`   | View               | code that draws SVG / WebGL layers                             |
-| `src/controllers/` | Editors / UI       | editors, tools, dialogs, panels, overviews                     |
+| `src/controllers/` | Editors / UI       | editors, tools, dialogs, panels, overviews (legacy TS chrome)  |
+| `src/ui/`          | UI chrome (React)  | app-wide React root/shell, `<Panel>`, surfaces (see ADR-0003)  |
 | `src/io/`          | —                  | save / load / export / serialization                           |
 | `src/services/`    | —                  | app-shell & platform/asset infra (install, auto-update, fonts) |
 | `src/data/`        | —                  | static content / reference data (supporters, templates)        |
+
+As of the re-platform foundation (Phase 0, [ADR-0003](./docs/adr/adr-0003-react-build-tooling.md)),
+**React is in the Vite build** and a single app-wide root boots from `src/ui/boot.tsx` into the
+`#react-root` node. `src/ui/` is the home for all React UI chrome; `src/controllers/` is the
+shrinking legacy/TS editor layer that surfaces migrate _out of_ one at a time until cutover.
 
 ## What a "controller" is
 

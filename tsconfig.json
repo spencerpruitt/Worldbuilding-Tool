@@ -3,6 +3,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "target": "esnext",
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "ignoreDeprecations": "5.0",
     "paths": {
