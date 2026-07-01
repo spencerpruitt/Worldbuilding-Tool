@@ -2,6 +2,7 @@ import { type ComponentType, useEffect, useSyncExternalStore } from "react";
 import { closeSurface, getOpenSurfaces, subscribe } from "./app-shell/registry";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ComparePrices } from "./surfaces/ComparePrices";
+import { MarketOverview } from "./surfaces/MarketOverview";
 
 /**
  * App — the app-wide React shell.
@@ -24,8 +25,14 @@ import { ComparePrices } from "./surfaces/ComparePrices";
 type SurfaceComponent = ComponentType<{ onClose: () => void } & Record<string, unknown>>;
 
 // The known surfaces, keyed by registry id. Grows one entry per migrated surface.
+// Surfaces are cast to the widened SurfaceComponent because the registry cannot
+// statically match each id to its surface's specific props — the props arrive at
+// runtime from `openSurface`. A surface with required props (MarketOverview's
+// `marketId`) needs the `unknown` hop the compiler asks for. The Slice 8 registry
+// unification (`registerSurface(id, component)`) replaces this with a typed seam.
 const SURFACE_COMPONENTS: Record<string, SurfaceComponent> = {
-  "compare-prices": ComparePrices as SurfaceComponent
+  "compare-prices": ComparePrices as SurfaceComponent,
+  "market-overview": MarketOverview as unknown as SurfaceComponent
 };
 
 export function App() {

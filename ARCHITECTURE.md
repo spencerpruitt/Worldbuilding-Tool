@@ -243,6 +243,16 @@ As of the re-platform foundation (Phase 0, [ADR-0003](./docs/adr/adr-0003-react-
 `#react-root` node. `src/ui/` is the home for all React UI chrome; `src/controllers/` is the
 shrinking legacy/TS editor layer that surfaces migrate _out of_ one at a time until cutover.
 
+React surfaces read world data only through the **World-State accessor** (`src/ui/world-state.ts`),
+never raw `window.pack`. The accessor is also the **reactivity seam**
+([ADR-0004](./docs/adr/adr-0004-world-state-reactivity.md)): it exposes a single global world-version
+signal (`subscribeWorld`/`getWorldVersion`/`notifyWorldChanged`) that surfaces subscribe to via the
+`useWorldVersion` hook (`useSyncExternalStore`) to re-read on change. Economy mutation call sites
+call `notifyWorldChanged()` at the controller layer (never inside the domain core). A real per-entity
+store can later slot behind this seam by changing only the accessor and the mutation sites, not the
+surfaces. See [ADR-0004](./docs/adr/adr-0004-world-state-reactivity.md) for the deliberate exceptions
+(e.g. per-keystroke renames do not signal).
+
 ## What a "controller" is
 
 `src/controllers/` is the **UI / interaction layer**, deliberately broader than the

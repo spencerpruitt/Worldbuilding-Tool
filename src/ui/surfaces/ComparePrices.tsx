@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { rn } from "@/utils/numberUtils";
 import { formatPrice } from "@/utils/unitUtils";
 import { Panel } from "../Panel";
+import { useWorldVersion } from "../use-world-version";
 import {
   getGood,
   getGoodsSortedByName,
@@ -133,11 +134,20 @@ function resolveInitialGoodId(goodId: number | undefined): number {
  * back to the first good instead of blanking the table.
  */
 export function ComparePrices({ goodId, anchor, onClose }: ComparePricesProps) {
-  // Bumping this forces a re-read of world data (Refresh button) by invalidating
-  // the memoized rows below.
+  // Bumping this forces a local re-read of world data (Refresh button) by
+  // invalidating the memoized rows below. Refresh is a local re-read: it does not
+  // broadcast a world change, since nothing actually changed.
   const [refreshCount, refresh] = useReducer(count => count + 1, 0);
 
-  const sortedGoods = getGoodsSortedByName();
+  // Subscribe to the global world-change signal so an edit elsewhere (a converted
+  // surface or a retrofitted legacy editor) re-reads this table automatically,
+  // without the user pressing Refresh. The value is an opaque memo dependency.
+  const worldVersion = useWorldVersion();
+
+  // Memoized so an unrelated world change that re-renders this surface does not
+  // re-sort the goods list; only a Refresh or a real world change re-reads it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount and worldVersion are intentional cache-busters for the accessor read.
+  const sortedGoods = useMemo(() => getGoodsSortedByName(), [refreshCount, worldVersion]);
 
   const [selectedGoodId, setSelectedGoodId] = useState(() => resolveInitialGoodId(goodId));
   const [sortKey, setSortKey] = useState<SortKey>("stock");
@@ -157,7 +167,7 @@ export function ComparePrices({ goodId, anchor, onClose }: ComparePricesProps) {
   // The per-market pass is the expensive work (name/good lookups + reductions
   // across every market); memoize it so sort-direction and percentage toggles —
   // which do not change this data — don't redo it on a large world.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount is a deliberate cache-buster — the body reads mutable world globals via getMarkets(), so Refresh must invalidate this memo.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount and worldVersion are deliberate cache-busters — the body reads mutable world globals via getMarkets(), so Refresh and any world change must invalidate this memo.
   const { rows, totalStock, averagePrice } = useMemo(() => {
     if (!selectedGood) return { rows: [] as MarketRow[], totalStock: 0, averagePrice: 0 };
     const computedRows: MarketRow[] = getMarkets().map(market => {
@@ -174,8 +184,8 @@ export function ComparePrices({ goodId, anchor, onClose }: ComparePricesProps) {
     const priceSum = computedRows.reduce((sum, row) => sum + row.price, 0);
     const avgPrice = computedRows.length > 0 ? rn(priceSum / computedRows.length, 2) : 0;
     return { rows: computedRows, totalStock: stockTotal, averagePrice: avgPrice };
-    // refreshCount is a dep so Refresh re-reads the world.
-  }, [selectedGood, refreshCount]);
+    // refreshCount (local Refresh) and worldVersion (external change) both re-read the world.
+  }, [selectedGood, refreshCount, worldVersion]);
 
   const sortedRows = useMemo(() => {
     const direction = sortDirection === "down" ? -1 : 1;

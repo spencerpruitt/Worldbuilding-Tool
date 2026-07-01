@@ -1,5 +1,6 @@
 import { pointer, select } from "d3";
 import { lazy } from "@/lazy-loaders";
+import { notifyWorldChanged } from "@/ui/world-state";
 import type { Good } from "../generators/goods-generator";
 import { isDealRecord, isMfgRecord } from "../generators/production-generator";
 import { drawGoods, toggleGoods } from "../renderers/draw-goods";
@@ -396,6 +397,8 @@ function goodsRestoreDefaults() {
       Goods.restoreDefaults();
       Goods.generate();
       regenerateEconomy();
+      // Signal so open React economy surfaces re-read the regenerated goods/markets.
+      notifyWorldChanged();
     }
   });
 }
@@ -580,7 +583,11 @@ function requestProductionRegeneration() {
     message:
       "Are you sure you want to regenerate production and trade for all goods? Generation will be based on the current Goods settings and bonus goods placement",
     confirm: "Regenerate",
-    onConfirm: window.regenerateProduction
+    onConfirm: () => {
+      window.regenerateProduction();
+      // Signal so open React economy surfaces re-read the regenerated production/deals.
+      notifyWorldChanged();
+    }
   });
 }
 
@@ -595,6 +602,8 @@ function removeGood(good: Good, line: HTMLElement) {
 
     pack.goods = pack.goods.filter(g => g.i !== good.i);
     Goods.sync();
+    // Signal so open React economy surfaces re-read after the good is removed.
+    notifyWorldChanged();
     line.remove();
     ensureEl("goodsNumber").innerHTML = String(pack.goods.length);
 

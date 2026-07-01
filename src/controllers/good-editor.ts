@@ -1,3 +1,4 @@
+import { notifyWorldChanged } from "@/ui/world-state";
 import { CULTURE_TYPES } from "../generators/cultures-generator";
 import type { DemandCategory, Good } from "../generators/goods-generator";
 import { DEMAND_CATEGORY_ICONS, DEMAND_PRIORITY } from "../generators/goods-generator";
@@ -464,6 +465,8 @@ export function goodEditor(editedGood?: Good, onUpdate?: () => void) {
           Goods.sync();
         }
 
+        // Signal so open React economy surfaces re-read after the good is saved.
+        notifyWorldChanged();
         tip(editedGood ? "Good is updated" : "Good is added", false, "success", 5000);
         onUpdate?.();
         $(dialog).dialog("close");

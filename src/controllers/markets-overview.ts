@@ -1,5 +1,6 @@
 import { color, drag, pointer, select } from "d3";
 import { lazy } from "@/lazy-loaders";
+import { notifyWorldChanged } from "@/ui/world-state";
 import type { Burg } from "../generators/burgs-generator";
 import type { Deal, Market } from "../generators/markets-generator";
 import { highlightMarketOff, highlightMarketOn } from "../renderers/draw-markets";
@@ -186,6 +187,9 @@ function marketsOverviewAddLines(): void {
 function redrawMarketsAfterBulkDelete(): void {
   if (layerIsOn("toggleMarketsLayer")) drawMarketsLayer();
   marketsOverviewAddLines();
+  // The bulk bar calls this once after any bulk market mutation (delete/recolor),
+  // so it is the single point to signal open React surfaces for bulk edits.
+  notifyWorldChanged();
 }
 
 function enterMarketsManualAssignment(): void {
@@ -365,6 +369,8 @@ function exitMarketsManualAssignment(apply: boolean): void {
       const burgId = pack.cells.burg[cellId];
       if (burgId) (pack.burgs as Burg[])[burgId].market = marketId;
     }
+    // Signal so open React surfaces re-read the reassigned cell/burg counts.
+    notifyWorldChanged();
   }
 
   marketsWorking = null;
@@ -429,6 +435,8 @@ function addMarketOnClick(this: SVGElement, ev: MouseEvent): void {
 
   if (layerIsOn("toggleMarketsLayer")) drawMarketsLayer();
   marketsOverviewAddLines();
+  // Signal so open React economy surfaces reflect the new market.
+  notifyWorldChanged();
 }
 
 function confirmRemoveMarket(marketId: number): void {
@@ -444,6 +452,8 @@ function confirmRemoveMarket(marketId: number): void {
       Markets.removeMarket(marketId);
       if (layerIsOn("toggleMarketsLayer")) drawMarketsLayer();
       marketsOverviewAddLines();
+      // Signal so an open React surface for this market re-reads (and closes it out).
+      notifyWorldChanged();
     }
   });
 }
@@ -456,6 +466,8 @@ function marketChangeFill(fillBox: HTMLElement, marketId: number): void {
     (fillBox as unknown as { fill: string }).fill = newFill;
     market.color = newFill;
     applyMarketColor(marketId, newFill);
+    // Signal so open React surfaces re-read the recolored market swatch.
+    notifyWorldChanged();
   };
 
   openPicker(market.color, callback);
@@ -584,6 +596,8 @@ function regenerateMarkets() {
       const regenProduction = ensureEl<HTMLInputElement>("marketsRegenerateProductionToggle").checked;
       window.regenerateMarkets();
       if (regenProduction) window.regenerateProduction();
+      // Signal so open React economy surfaces re-read the regenerated markets/deals.
+      notifyWorldChanged();
     }
   });
 }
@@ -594,7 +608,11 @@ function regenerateProduction() {
     message:
       "Are you sure you want to regenerate production and trade for all goods? Generation will be based on the current Goods settings and bonus goods placement",
     confirm: "Regenerate",
-    onConfirm: window.regenerateProduction
+    onConfirm: () => {
+      window.regenerateProduction();
+      // Signal so open React economy surfaces re-read the regenerated production/deals.
+      notifyWorldChanged();
+    }
   });
 }
 

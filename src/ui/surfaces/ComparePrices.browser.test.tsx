@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Good } from "@/generators/goods-generator";
 import type { Market } from "@/generators/markets-generator";
+import { notifyWorldChanged } from "../world-state";
 import { ComparePrices, resetPersistedGood } from "./ComparePrices";
 
 // A small world stubbed via the same window.X bridge the accessor reads (see
@@ -137,6 +138,23 @@ describe("<ComparePrices>", () => {
     // not the alphabetical first good — matching the legacy persistent selection.
     render(<ComparePrices onClose={() => {}} />);
     expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("0");
+  });
+
+  it("re-reads the table when the world changes underneath it (reactivity)", () => {
+    const { container } = render(<ComparePrices goodId={0} onClose={() => {}} />);
+    expect(renderedStockCells(container)).toEqual(["12", "5"]);
+
+    // Mutate the world underneath the surface, then signal — the way a retrofitted
+    // legacy editor or a converted surface's edit would. No Refresh click.
+    harbor.goods[0].stock = 99;
+    act(() => {
+      notifyWorldChanged();
+    });
+
+    // 99 now beats inland's 5 and stays first under Stock-descending sort.
+    expect(renderedStockCells(container)).toEqual(["99", "5"]);
+    // Restore so later tests see the original stub.
+    harbor.goods[0].stock = 12;
   });
 
   it("quotes a market name containing a comma so the CSV row stays intact", () => {
