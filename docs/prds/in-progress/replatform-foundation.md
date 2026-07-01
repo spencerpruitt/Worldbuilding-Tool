@@ -273,7 +273,7 @@ existing app is otherwise untouched.
 - [x] `biome check` and `tsc` pass with `.tsx` support enabled.
 
 ### Slice 3 — Compare Prices opens/closes as a React surface (skeleton) through the preserved seam  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: Slice 2
 - User stories: 6, 7, 8, 9, 11
 
@@ -283,10 +283,10 @@ rolled `<Panel>` frame. `<ComparePrices>` renders just its title + selected good
 anchor?)` dispatches into the shell; both existing callers still open it.
 
 **Acceptance criteria:**
-- [ ] Triggering `open()` mounts the surface in a draggable `<Panel>`; closing unmounts its subtree.
-- [ ] The surface reads the selected good through the accessor, not raw `window.pack`.
-- [ ] Both legacy callers (goods editor, markets overview) open the React surface.
-- [ ] App-shell open/close and accessor read-shape have component tests.
+- [x] Triggering `open()` mounts the surface in a draggable `<Panel>`; closing unmounts its subtree.
+- [x] The surface reads the selected good through the accessor, not raw `window.pack`.
+- [x] Both legacy callers (goods editor, markets overview) open the React surface.
+- [x] App-shell open/close and accessor read-shape have component tests.
 
 ### Slice 4 — Compare Prices reaches full parity in React  [AFK]
 - Status: todo
@@ -294,12 +294,19 @@ anchor?)` dispatches into the shell; both existing callers still open it.
 - User stories: 3, 4
 
 **What to build:** Flesh out `<ComparePrices>` to match legacy behavior end to end, reading through
-the accessor and using existing globals for side-effects.
+the accessor and using existing globals for side-effects. This is where the legacy market table,
+column sorting, and default-good selection (dropped in the Slice 3 skeleton) are restored — full
+parity, nothing silently lost.
 
 **Acceptance criteria:**
 - [ ] Goods dropdown switches the compared good and re-renders; refresh re-reads; percentage toggle
   switches modes; footer totals compute; CSV export matches legacy output; panel anchors correctly.
-- [ ] Component tests cover dropdown re-render, percentage toggle, and CSV export.
+- [ ] Opening without a `goodId` (e.g. from the markets overview) defaults to the first good and
+  renders the full table immediately, matching the legacy auto-select (not the skeleton's "Select a
+  good").
+- [ ] Column headers (Market / Stock / Price) are click-sortable, matching the legacy `applySorting`
+  behavior that the skeleton dropped.
+- [ ] Component tests cover dropdown re-render, percentage toggle, CSV export, and column sorting.
 
 ### Slice 5 — Retire legacy Compare Prices; shrink the bridge  [AFK]
 - Status: todo

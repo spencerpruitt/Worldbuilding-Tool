@@ -1,10 +1,10 @@
 import type {Page} from "@playwright/test";
 
-// Shared console/pageerror collector for e2e specs. Attach it BEFORE navigating
-// so boot-time errors are captured, then read the accumulator after the app
-// settles. `critical()` filters out the expected external noise (fonts,
-// analytics, failed third-party resource loads) that the app cannot control,
-// mirroring the filter previously inlined in load-map.spec.ts.
+// Shared console/pageerror collector for the e2e specs (react-boot, load-map).
+// Attach it BEFORE the navigation whose errors you want to capture, then read
+// the accumulator after the app settles. `critical()` filters out the expected
+// external noise (fonts, analytics, failed third-party resource loads) that the
+// app cannot control.
 export function collectConsoleErrors(page: Page): {critical: () => string[]} {
   const errors: string[] = [];
 

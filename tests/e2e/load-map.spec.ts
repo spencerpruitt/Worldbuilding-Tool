@@ -1,5 +1,6 @@
 import {test, expect} from "@playwright/test";
 import path from "path";
+import {collectConsoleErrors} from "./helpers/console-errors";
 
 test.describe("Map loading", () => {
   test.beforeEach(async ({context, page}) => {
@@ -17,16 +18,7 @@ test.describe("Map loading", () => {
 
   test("should load a saved map file", async ({page}) => {
     // Track errors during map loading
-    const errors: string[] = [];
-    page.on("pageerror", error => {
-      const message = error?.message || String(error);
-      if (message) errors.push(`pageerror: ${message}`);
-    });
-    page.on("console", msg => {
-      if (msg.type() === "error") {
-        errors.push(`console.error: ${msg.text()}`);
-      }
-    });
+    const errors = collectConsoleErrors(page);
 
     // Get the file input element and upload the map file
     const fileInput = page.locator("#mapToLoad");
@@ -62,27 +54,11 @@ test.describe("Map loading", () => {
 
     // Ensure no JavaScript errors occurred during loading
     // Filter out expected errors (external resources like Google Analytics, fonts)
-    const criticalErrors = errors.filter(
-      e =>
-        !e.includes("fonts.googleapis.com") &&
-        !e.includes("google-analytics") &&
-        !e.includes("googletagmanager") &&
-        !e.includes("Failed to load resource")
-    );
-    expect(criticalErrors).toEqual([]);
+    expect(errors.critical()).toEqual([]);
   });
 
   test("loaded map should have correct SVG structure", async ({page}) => {
-    const errors: string[] = [];
-    page.on("pageerror", error => {
-      const message = error?.message || String(error);
-      if (message) errors.push(`pageerror: ${message}`);
-    });
-    page.on("console", msg => {
-      if (msg.type() === "error") {
-        errors.push(`console.error: ${msg.text()}`);
-      }
-    });
+    const errors = collectConsoleErrors(page);
 
     const fileInput = page.locator("#mapToLoad");
     const mapFilePath = path.join(__dirname, "../fixtures/demo.map");
@@ -114,27 +90,11 @@ test.describe("Map loading", () => {
     expect(layers.burgs).toBe(true);
     expect(layers.labels).toBe(true);
 
-    const criticalErrors = errors.filter(
-      e =>
-        !e.includes("fonts.googleapis.com") &&
-        !e.includes("google-analytics") &&
-        !e.includes("googletagmanager") &&
-        !e.includes("Failed to load resource")
-    );
-    expect(criticalErrors).toEqual([]);
+    expect(errors.critical()).toEqual([]);
   });
 
   test("loaded map should preserve state data", async ({page}) => {
-    const errors: string[] = [];
-    page.on("pageerror", error => {
-      const message = error?.message || String(error);
-      if (message) errors.push(`pageerror: ${message}`);
-    });
-    page.on("console", msg => {
-      if (msg.type() === "error") {
-        errors.push(`console.error: ${msg.text()}`);
-      }
-    });
+    const errors = collectConsoleErrors(page);
 
     const fileInput = page.locator("#mapToLoad");
     const mapFilePath = path.join(__dirname, "../fixtures/demo.map");
@@ -163,27 +123,11 @@ test.describe("Map loading", () => {
     expect(statesData.allHaveCells).toBe(true);
     expect(statesData.allHaveArea).toBe(true);
 
-    const criticalErrors = errors.filter(
-      e =>
-        !e.includes("fonts.googleapis.com") &&
-        !e.includes("google-analytics") &&
-        !e.includes("googletagmanager") &&
-        !e.includes("Failed to load resource")
-    );
-    expect(criticalErrors).toEqual([]);
+    expect(errors.critical()).toEqual([]);
   });
 
   test("loaded map should preserve burg data", async ({page}) => {
-    const errors: string[] = [];
-    page.on("pageerror", error => {
-      const message = error?.message || String(error);
-      if (message) errors.push(`pageerror: ${message}`);
-    });
-    page.on("console", msg => {
-      if (msg.type() === "error") {
-        errors.push(`console.error: ${msg.text()}`);
-      }
-    });
+    const errors = collectConsoleErrors(page);
 
     const fileInput = page.locator("#mapToLoad");
     const mapFilePath = path.join(__dirname, "../fixtures/demo.map");
@@ -213,13 +157,6 @@ test.describe("Map loading", () => {
     expect(burgsData.allHaveCoords).toBe(true);
     expect(burgsData.allHaveCells).toBe(true);
 
-    const criticalErrors = errors.filter(
-      e =>
-        !e.includes("fonts.googleapis.com") &&
-        !e.includes("google-analytics") &&
-        !e.includes("googletagmanager") &&
-        !e.includes("Failed to load resource")
-    );
-    expect(criticalErrors).toEqual([]);
+    expect(errors.critical()).toEqual([]);
   });
 });

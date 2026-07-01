@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   // Mirror the "@" → src alias from vite.config.ts / tsconfig so tests resolve
@@ -12,6 +12,9 @@ export default defineConfig({
   test: {
     root: "./src",
     setupFiles: ["./test-setup.ts"],
-    environment: "node"
+    environment: "node",
+    // React component tests run on the browser runner (vitest.browser.config.ts),
+    // not here — keep the Node runner from picking them up.
+    exclude: [...configDefaults.exclude, "**/*.browser.test.{ts,tsx}"]
   }
 });
