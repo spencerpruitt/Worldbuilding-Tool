@@ -111,6 +111,31 @@ describe("<Panel>", () => {
     expect(topForB).toBeGreaterThan(topForA);
   });
 
+  it("does not start a drag when the close button is pressed", () => {
+    const onClose = vi.fn();
+    render(
+      <Panel title="Compare Prices" onClose={onClose}>
+        <div>panel body</div>
+      </Panel>
+    );
+
+    const frame = screen.getByRole("dialog");
+    const closeButton = screen.getByRole("button", { name: "Close" });
+    const startLeft = frame.getBoundingClientRect().left;
+
+    // Press on the close button and move the pointer: the panel must NOT move
+    // (the close button is excluded from the drag handle).
+    fireEvent.pointerDown(closeButton, { clientX: startLeft + 5, clientY: 10 });
+    fireEvent.pointerMove(document.body, { clientX: startLeft + 200, clientY: 10 });
+    fireEvent.pointerUp(document.body, { clientX: startLeft + 200, clientY: 10 });
+
+    expect(frame.getBoundingClientRect().left).toBe(startLeft);
+
+    // And clicking it still closes.
+    fireEvent.click(closeButton);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("clamps a left-edge anchor so the frame stays on-screen", () => {
     // An anchor hard against the left edge would compute a negative left
     // (anchorLeft - width - 10); the frame must be clamped back on-screen.

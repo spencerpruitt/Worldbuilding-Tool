@@ -1,4 +1,4 @@
-import { useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { rn } from "@/utils/numberUtils";
 import { formatPrice } from "@/utils/unitUtils";
 import { Panel } from "../Panel";
@@ -91,6 +91,30 @@ function SortHeader({ label, sortKey, className, dataTip, onSort, style }: SortH
   );
 }
 
+// The last good the user viewed, persisted across opens at module scope —
+// mirroring the legacy module-level `activeGoodId`, which survived dialog
+// close/reopen. Reopening without an explicit good returns to this one. A stale
+// id from a previous world is harmless: resolveInitialGoodId re-validates it.
+let lastGoodId = -1;
+
+/** Reset the persisted good selection. Exists so tests can isolate this module. */
+export function resetPersistedGood(): void {
+  lastGoodId = -1;
+}
+
+/**
+ * Resolve which good to select on open. An explicit `goodId` (the goods editor
+ * passes one) wins; otherwise return to the last-viewed good (the markets
+ * overview passes none, and the legacy dialog remembered the selection); failing
+ * both, fall back to the first good sorted by name. Only ever returns a valid id
+ * (or -1 when there are no goods).
+ */
+function resolveInitialGoodId(goodId: number | undefined): number {
+  if (goodId !== undefined && goodId >= 0 && getGood(goodId)) return goodId;
+  if (getGood(lastGoodId)) return lastGoodId;
+  return getGoodsSortedByName()[0]?.i ?? -1;
+}
+
 /**
  * ComparePrices — the Compare Prices surface, at full parity with the legacy
  * jQuery-UI dialog.
@@ -102,51 +126,64 @@ function SortHeader({ label, sortKey, className, dataTip, onSort, style }: SortH
  * absolute/percentage stock mode — as React state rather than DOM mutation.
  *
  * The surface is remounted on every open (App keys it by the registry token), so
- * its view state resets per open the way the legacy dialog did. The selected
- * good is reconciled against the live goods list on every render, so an invalid
- * incoming id or a good deleted between Refreshes falls back to the first good
- * instead of blanking the table.
+ * the transient view state (sort, percentage) resets per open the way the legacy
+ * dialog did; the selected good instead persists across opens via `lastGoodId`,
+ * matching the legacy `activeGoodId`. The selection is reconciled against the
+ * live goods list on every render, so a good deleted between Refreshes falls
+ * back to the first good instead of blanking the table.
  */
 export function ComparePrices({ goodId, anchor, onClose }: ComparePricesProps) {
-  // Bumping this forces a re-read of world data (Refresh button). Reads happen
-  // in render, so a re-render re-snapshots the accessor.
-  const [, refresh] = useReducer(count => count + 1, 0);
+  // Bumping this forces a re-read of world data (Refresh button) by invalidating
+  // the memoized rows below.
+  const [refreshCount, refresh] = useReducer(count => count + 1, 0);
 
   const sortedGoods = getGoodsSortedByName();
 
-  const [selectedGoodId, setSelectedGoodId] = useState(() => goodId ?? -1);
+  const [selectedGoodId, setSelectedGoodId] = useState(() => resolveInitialGoodId(goodId));
   const [sortKey, setSortKey] = useState<SortKey>("stock");
   const [sortDirection, setSortDirection] = useState<SortDirection>("down");
   const [showPercentage, setShowPercentage] = useState(false);
 
+  // Persist the current selection so a later reopen returns to it (legacy parity).
+  useEffect(() => {
+    if (selectedGoodId >= 0) lastGoodId = selectedGoodId;
+  }, [selectedGoodId]);
+
   // Reconcile the selection against the live goods list: if the id does not
-  // resolve to a good (invalid incoming id, or the good was deleted before a
-  // Refresh), fall back to the first good — the legacy `rebuildGoodSelect` guard.
+  // resolve to a good (the good was deleted before a Refresh), fall back to the
+  // first good — the legacy `rebuildGoodSelect` guard.
   const selectedGood = getGood(selectedGoodId) ?? sortedGoods[0];
 
-  const rows: MarketRow[] = selectedGood
-    ? getMarkets().map(market => {
-        const marketGood = getMarketGood(market, selectedGood);
-        return {
-          id: market.i,
-          name: getMarketName(market),
-          color: getMarketColor(market),
-          stock: rn(marketGood?.stock ?? 0, 2),
-          price: rn(marketGood?.price ?? 0, 2)
-        };
-      })
-    : [];
+  // The per-market pass is the expensive work (name/good lookups + reductions
+  // across every market); memoize it so sort-direction and percentage toggles —
+  // which do not change this data — don't redo it on a large world.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount is a deliberate cache-buster — the body reads mutable world globals via getMarkets(), so Refresh must invalidate this memo.
+  const { rows, totalStock, averagePrice } = useMemo(() => {
+    if (!selectedGood) return { rows: [] as MarketRow[], totalStock: 0, averagePrice: 0 };
+    const computedRows: MarketRow[] = getMarkets().map(market => {
+      const marketGood = getMarketGood(market, selectedGood);
+      return {
+        id: market.i,
+        name: getMarketName(market),
+        color: getMarketColor(market),
+        stock: rn(marketGood?.stock ?? 0, 2),
+        price: rn(marketGood?.price ?? 0, 2)
+      };
+    });
+    const stockTotal = computedRows.reduce((sum, row) => sum + row.stock, 0);
+    const priceSum = computedRows.reduce((sum, row) => sum + row.price, 0);
+    const avgPrice = computedRows.length > 0 ? rn(priceSum / computedRows.length, 2) : 0;
+    return { rows: computedRows, totalStock: stockTotal, averagePrice: avgPrice };
+    // refreshCount is a dep so Refresh re-reads the world.
+  }, [selectedGood, refreshCount]);
 
-  const totalStock = rows.reduce((sum, row) => sum + row.stock, 0);
-  const priceSum = rows.reduce((sum, row) => sum + row.price, 0);
-  const averagePrice = rows.length > 0 ? rn(priceSum / rows.length, 2) : 0;
-
-  const sortDescending = sortDirection === "down" ? -1 : 1;
-  const sortedRows = [...rows].sort((first, second) => {
-    if (sortKey === "market") return first.name.localeCompare(second.name) * sortDescending;
-    const comparison = first[sortKey] > second[sortKey] ? 1 : first[sortKey] < second[sortKey] ? -1 : 0;
-    return comparison * sortDescending;
-  });
+  const sortedRows = useMemo(() => {
+    const direction = sortDirection === "down" ? -1 : 1;
+    return [...rows].sort((first, second) => {
+      if (sortKey === "market") return first.name.localeCompare(second.name) * direction;
+      return (first[sortKey] - second[sortKey]) * direction;
+    });
+  }, [rows, sortKey, sortDirection]);
 
   function handleGoodChange(event: React.ChangeEvent<HTMLSelectElement>): void {
     setSelectedGoodId(Number(event.target.value));

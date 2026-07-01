@@ -32,18 +32,30 @@
   class FillBox extends HTMLElement {
     constructor() {
       super();
-
-      this.appendChild(template.content.cloneNode(true));
-      this.querySelector("rect")?.setAttribute("fill", this.fill);
-      this.querySelector("svg")?.setAttribute("width", this.size);
-      this.querySelector("svg")?.setAttribute("height", this.size);
+      // Do NOT append children here: the DOM throws NotSupportedError when an
+      // element created via document.createElement() gains children in its
+      // constructor. Legacy call sites build fill-box via innerHTML (the parser
+      // path, which is exempt), but React renders it via createElement, so the
+      // svg is built lazily in connectedCallback instead.
     }
 
     static showTip() {
       tip(this.tip);
     }
 
+    // Build the swatch once, on first connect, from the current attributes
+    // (fill/size are always set by the time the element is inserted). Guarded so
+    // a disconnect/reconnect does not append a second svg.
+    #buildSvg() {
+      if (this.querySelector("svg")) return;
+      this.appendChild(template.content.cloneNode(true));
+      this.querySelector("rect")?.setAttribute("fill", this.fill);
+      this.querySelector("svg")?.setAttribute("width", this.size);
+      this.querySelector("svg")?.setAttribute("height", this.size);
+    }
+
     connectedCallback() {
+      this.#buildSvg();
       this.addEventListener("mousemove", this.constructor.showTip);
     }
 

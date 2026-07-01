@@ -124,6 +124,19 @@ export function Panel({ title, anchor, onClose, children }: PanelProps) {
     };
   }, [handlePointerMove, handlePointerUp]);
 
+  // Re-clamp into the viewport when the window resizes, so a frame anchored near
+  // an edge cannot end up off-screen (title bar/close button unreachable) after
+  // the user narrows the window.
+  useEffect(() => {
+    function handleResize(): void {
+      const frame = frameRef.current;
+      if (!frame) return;
+      setPosition(current => (current ? clampToViewport(current.left, current.top, frame.offsetWidth) : current));
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Keep the frame hidden until the anchor pass computes a position, so it does
   // not flash at (0,0) before positioning.
   const frameStyle: React.CSSProperties =
@@ -135,7 +148,16 @@ export function Panel({ title, anchor, onClose, children }: PanelProps) {
     <div ref={frameRef} className="ui-dialog ui-draggable" style={frameStyle} role="dialog" aria-label={title}>
       <div className="ui-dialog-titlebar" onPointerDown={handleTitlePointerDown}>
         <span className="ui-dialog-title">{title}</span>
-        <button type="button" className="ui-dialog-titlebar-close icon-cancel" aria-label="Close" onClick={onClose} />
+        <button
+          type="button"
+          className="ui-dialog-titlebar-close icon-cancel"
+          aria-label="Close"
+          // Stop the pointerdown from bubbling to the titlebar's drag handler, so
+          // pressing the close button never starts a drag (legacy jQuery-UI
+          // excluded the close button from the draggable area via `cancel`).
+          onPointerDown={event => event.stopPropagation()}
+          onClick={onClose}
+        />
       </div>
       <div className="ui-dialog-content dialog">{children}</div>
     </div>

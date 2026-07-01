@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Good } from "@/generators/goods-generator";
 import type { Market } from "@/generators/markets-generator";
-import { ComparePrices } from "./ComparePrices";
+import { ComparePrices, resetPersistedGood } from "./ComparePrices";
 
 // A small world stubbed via the same window.X bridge the accessor reads (see
 // world-state.test.ts). Two goods and two markets are enough to exercise the
@@ -26,6 +26,8 @@ const inland: Market = {
 const globalScope = globalThis as Record<string, unknown>;
 
 beforeEach(() => {
+  // Reset the module-level persisted good so selection does not leak between tests.
+  resetPersistedGood();
   globalScope.pack = { goods: [iron, grain], markets: [harbor, inland] };
   globalScope.Goods = { get: (id: number) => [iron, grain].find(good => good.i === id) };
   globalScope.Markets = { getName: (market: Market) => `Market ${market.i}` };
@@ -122,6 +124,19 @@ describe("<ComparePrices>", () => {
     const select = screen.getByRole("combobox") as HTMLSelectElement;
     expect(select.value).toBe("1");
     expect(container.querySelectorAll(".states").length).toBe(2);
+  });
+
+  it("remembers the last-selected good across reopens without a goodId", () => {
+    // Grain (id 1) is the alphabetical default; pick Iron (id 0) so a remembered
+    // selection is distinguishable from the first-good fallback.
+    const first = render(<ComparePrices goodId={1} onClose={() => {}} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "0" } });
+    first.unmount();
+
+    // Reopen without a goodId (the markets-overview path): it returns to Iron,
+    // not the alphabetical first good — matching the legacy persistent selection.
+    render(<ComparePrices onClose={() => {}} />);
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("0");
   });
 
   it("quotes a market name containing a comma so the CSV row stays intact", () => {

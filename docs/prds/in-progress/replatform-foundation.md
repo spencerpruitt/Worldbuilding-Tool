@@ -309,7 +309,7 @@ parity, nothing silently lost.
 - [x] Component tests cover dropdown re-render, percentage toggle, CSV export, and column sorting.
 
 ### Slice 5 — Retire legacy Compare Prices; shrink the bridge  [AFK]
-- Status: todo
+- Status: done
 - Blocked by: Slice 4
 - User stories: 10, 11
 
@@ -318,9 +318,15 @@ template-string builders, and the static inner markup in the shell — leaving o
 and an empty mount node.
 
 **Acceptance criteria:**
-- [ ] Legacy Compare Prices rendering code and its static shell markup are removed.
-- [ ] Parity e2e opens the surface via the real trigger and matches prior behavior.
-- [ ] The `window.X`/dialog surface count drops by one; no dead references remain.
+- [x] Legacy Compare Prices rendering code and its static shell markup are removed.
+- [x] Parity e2e opens the surface via the real trigger and matches prior behavior.
+- [x] The `window.X`/dialog surface count drops by one; no dead references remain.
+
+**Deferred to a later shell-hardening slice (Slice 8, recipe freeze):** unify the app-shell open/close
+registry with the `SURFACE_COMPONENTS` id→component map into one `registerSurface(id, component)` seam,
+so "add a surface" is a single registration and a typo'd/unregistered id can't compile. For now the two
+are separate tables keyed by the same id string, and `<App>` reaps (closes + warns once) any surface
+opened under an unregistered id.
 
 ### Slice 6 — HITL verification: Compare Prices parity + app health  [HITL]
 - Status: todo

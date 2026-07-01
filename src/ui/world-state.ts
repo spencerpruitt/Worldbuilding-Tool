@@ -48,7 +48,7 @@ export function getMarketName(market: Market): string {
  * stock it (`market.goods[good.i]`).
  */
 export function getMarketGood(market: Market, good: Good): { stock: number; price: number } | undefined {
-  return market.goods[good.i];
+  return market.goods?.[good.i];
 }
 
 /** A market's swatch color (`market.color`). */

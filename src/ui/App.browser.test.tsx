@@ -51,14 +51,17 @@ describe("<App> surface mounting", () => {
     expect(screen.queryByText("Iron Ore")).toBeNull();
   });
 
-  it("warns and renders nothing for an unregistered surface id", () => {
+  it("warns about and reaps an unregistered surface id instead of leaving a zombie", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     render(<App />);
 
     act(() => openSurface("does-not-exist", {}));
 
+    // Nothing renders, the warning fires, and the reaping effect closed it so no
+    // zombie entry lingers to re-warn on every future render.
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(warn).toHaveBeenCalledWith('No React surface registered for id "does-not-exist"');
+    expect(warn).toHaveBeenCalledWith('No React surface registered for id "does-not-exist"; closing it');
+    expect(getOpenSurfaces()).toEqual([]);
     warn.mockRestore();
   });
 });

@@ -1,5 +1,6 @@
-import { type ComponentType, useSyncExternalStore } from "react";
+import { type ComponentType, useEffect, useSyncExternalStore } from "react";
 import { closeSurface, getOpenSurfaces, subscribe } from "./app-shell/registry";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { ComparePrices } from "./surfaces/ComparePrices";
 
 /**
@@ -13,7 +14,8 @@ import { ComparePrices } from "./surfaces/ComparePrices";
  *
  * Each surface component wraps itself in a <Panel> (owning its own title and
  * anchor); App just supplies the props it was opened with plus an `onClose`
- * bound to `closeSurface`. Uses the automatic JSX runtime — no `import React`.
+ * bound to `closeSurface`, and isolates it in an <ErrorBoundary> so one surface
+ * crashing cannot blank the single-root tree. Uses the automatic JSX runtime.
  */
 
 // Every surface takes at least an onClose; individual surfaces widen this with
@@ -29,20 +31,31 @@ const SURFACE_COMPONENTS: Record<string, SurfaceComponent> = {
 export function App() {
   const openSurfaces = useSyncExternalStore(subscribe, getOpenSurfaces, getOpenSurfaces);
 
+  // Reap any surface opened under an id with no registered component (a typo, or
+  // a surface wired through openSurface but not added to SURFACE_COMPONENTS).
+  // Closing it here keeps the store from carrying a zombie entry that would
+  // otherwise re-warn on every render.
+  useEffect(() => {
+    for (const { id } of openSurfaces) {
+      if (!SURFACE_COMPONENTS[id]) {
+        console.warn(`No React surface registered for id "${id}"; closing it`);
+        closeSurface(id);
+      }
+    }
+  }, [openSurfaces]);
+
   return (
     <>
       {openSurfaces.map(({ id, props, token }) => {
         const Surface = SURFACE_COMPONENTS[id];
-        if (!Surface) {
-          // A surface was opened by an id with no registered component (a typo or
-          // a surface not added to SURFACE_COMPONENTS). Warn so the trigger does
-          // not silently do nothing, then skip it.
-          console.warn(`No React surface registered for id "${id}"`);
-          return null;
-        }
+        if (!Surface) return null;
         // Key by (id, token) so re-opening a surface remounts it fresh, resetting
         // its in-panel view state the way the legacy dialogs did on every open.
-        return <Surface key={`${id}:${token}`} {...props} onClose={() => closeSurface(id)} />;
+        return (
+          <ErrorBoundary key={`${id}:${token}`} label={id}>
+            <Surface {...props} onClose={() => closeSurface(id)} />
+          </ErrorBoundary>
+        );
       })}
     </>
   );
