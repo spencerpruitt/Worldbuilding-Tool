@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { closeSurface, getOpenSurfaces, openSurface } from "./app-shell/registry";
+import { closeSurface, getOpenSurfaces, openSurface, type SurfaceId } from "./app-shell/registry";
 
 const globalScope = globalThis as Record<string, unknown>;
 
@@ -55,7 +55,9 @@ describe("<App> surface mounting", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     render(<App />);
 
-    act(() => openSurface("does-not-exist", {}));
+    // `SurfaceId` makes this a compile error normally; cast to exercise the
+    // runtime backstop for an id with no registered component.
+    act(() => openSurface("does-not-exist" as SurfaceId, {}));
 
     // Nothing renders, the warning fires, and the reaping effect closed it so no
     // zombie entry lingers to re-warn on every future render.

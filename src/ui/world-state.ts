@@ -1,6 +1,6 @@
 import type { Burg } from "@/generators/burgs-generator";
 import type { Good } from "@/generators/goods-generator";
-import type { Market } from "@/generators/markets-generator";
+import type { Deal, Market } from "@/generators/markets-generator";
 import type { State } from "@/generators/states-generator";
 
 /**
@@ -109,6 +109,22 @@ export function getGoodStroke(color: string): string {
 /** A market's center burg (`pack.burgs[market.centerBurgId]`), or undefined. */
 export function getMarketCenterBurg(market: Market): Burg | undefined {
   return pack?.burgs?.[market.centerBurgId];
+}
+
+/** A burg by id (`pack.burgs[id]`), or undefined. */
+export function getBurg(id: number): Burg | undefined {
+  return pack?.burgs?.[id];
+}
+
+/** Every deal where a market is the seller or the buyer (`pack.deals`). */
+export function getMarketDeals(marketId: number): Deal[] {
+  const deals = pack?.deals;
+  if (!deals) return [];
+  return deals.filter(
+    deal =>
+      (deal.sellerType === "market" && deal.seller === marketId) ||
+      (deal.buyerType === "market" && deal.buyer === marketId)
+  );
 }
 
 /**

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { lazy } from "@/lazy-loaders";
 import { rn } from "@/utils/numberUtils";
 import { formatPrice } from "@/utils/unitUtils";
+import { csvField } from "../csv";
 import { Panel } from "../Panel";
+import { type SortDirection, SortHeader, sortableHeaderClass } from "../SortHeader";
 import { useWorldVersion } from "../use-world-version";
 import {
   getCustomerBuyPrice,
@@ -27,11 +29,10 @@ interface MarketOverviewProps {
   onClose: () => void;
 }
 
-// Which column the goods table is sorted by, and its direction. Good sorts by
-// name (alphabetically), Stock/Price sort numerically — matching the legacy
-// header `data-sortby` values and the `applySorting` name/number split.
+// Which column the goods table is sorted by. Good sorts by name (alphabetically),
+// Stock/Price sort numerically — matching the legacy header `data-sortby` values
+// and the `applySorting` name/number split. Direction is the shared SortDirection.
 type SortKey = "good" | "stock" | "price";
-type SortDirection = "up" | "down";
 
 // One rendered goods line: the good's swatch color/stroke/icon, name, and the
 // market's rounded stock/price for it (rounded the way the legacy `addLines` did).
@@ -43,51 +44,6 @@ interface GoodRow {
   icon: string;
   stock: number;
   price: number;
-}
-
-/**
- * Quote a CSV field per RFC 4180 (identical to the Compare Prices helper): wrap
- * in double quotes (doubling embedded quotes) only when the field contains a
- * comma, quote, or newline, so normal exports stay byte-identical to the legacy
- * output while a good name with a comma no longer corrupts the row.
- */
-function csvField(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
-
-interface SortHeaderProps {
-  label: string;
-  sortKey: SortKey;
-  className: string;
-  dataTip: string;
-  onSort: (key: SortKey) => void;
-  style?: React.CSSProperties;
-}
-
-/**
- * A clickable, keyboard-operable column header. Rendered as a `<div>` (not a
- * `<button>`) so it keeps the legacy grid-cell look while carrying the legacy
- * `data-sortby` marker, `data-tip` tooltip, and `sortable`/`icon-sort-*` classes.
- */
-function SortHeader({ label, sortKey, className, dataTip, onSort, style }: SortHeaderProps) {
-  return (
-    // biome-ignore lint/a11y/useSemanticElements: must stay a grid-cell <div> so the legacy `.header` CSS grid lays it out; keyboard handlers below give it button semantics.
-    <div
-      role="button"
-      tabIndex={0}
-      className={className}
-      data-sortby={sortKey}
-      data-tip={dataTip}
-      style={style}
-      onClick={() => onSort(sortKey)}
-      onKeyDown={event => {
-        if (event.key === "Enter" || event.key === " ") onSort(sortKey);
-      }}
-    >
-      {label}&nbsp;
-    </div>
-  );
 }
 
 /**
@@ -226,10 +182,7 @@ export function MarketOverview({ marketId, anchor, onClose }: MarketOverviewProp
   }
 
   function headerClassName(key: SortKey): string {
-    const base = key === "good" ? "sortable alphabetically" : "sortable";
-    if (key !== sortKey) return base;
-    const type = key === "good" ? "name" : "number";
-    return `${base} icon-sort-${type}-${sortDirection}`;
+    return sortableHeaderClass(key === sortKey, key === "good", sortDirection);
   }
 
   const title = market ? `Market Stock: ${getMarketName(market)}` : "Market Stock";

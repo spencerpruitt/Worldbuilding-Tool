@@ -1,4 +1,5 @@
 import { lazy } from "@/lazy-loaders";
+import { closeAllSurfaces } from "@/ui/app-shell/registry";
 import { calculateVoronoi, ensureEl, last, link, minmax, parseError, rn } from "@/utils";
 import { splitMapData } from "./map-schema";
 
@@ -235,6 +236,9 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
   try {
     // exit customization
     if (typeof window.closeDialogs === "function") closeDialogs();
+    // closeDialogs only closes legacy jQuery dialogs; also close any open React
+    // surfaces so a panel from the previous world does not linger after load.
+    closeAllSurfaces();
     customization = 0;
     if (ensureEl("customizationMenu").offsetParent) ensureEl("styleTab").click();
 

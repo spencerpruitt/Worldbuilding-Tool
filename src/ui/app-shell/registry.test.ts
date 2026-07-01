@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { closeSurface, getOpenSurfaces, openSurface, subscribe } from "./registry";
+import {
+  closeAllSurfaces,
+  closeSurface,
+  getOpenSurfaces,
+  getSurfaceComponent,
+  openSurface,
+  registerSurface,
+  type SurfaceComponent,
+  subscribe
+} from "./registry";
 
 // The registry is a module-level singleton, so each test must leave it empty.
 afterEach(() => {
@@ -66,5 +75,39 @@ describe("app-shell surface registry", () => {
     const afterOpen = getOpenSurfaces();
     expect(afterOpen).not.toBe(before);
     expect(getOpenSurfaces()).toBe(afterOpen);
+  });
+});
+
+describe("closeAllSurfaces", () => {
+  it("closes every open surface and notifies once", () => {
+    const listener = vi.fn();
+    openSurface("compare-prices", {});
+    openSurface("market-overview", { marketId: 1 });
+    const unsubscribe = subscribe(listener);
+
+    closeAllSurfaces();
+
+    expect(getOpenSurfaces()).toEqual([]);
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it("is a no-op (no notification) when nothing is open", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+    closeAllSurfaces();
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+});
+
+describe("surface component registry", () => {
+  it("returns the component registered for an id, and undefined for an unregistered one", () => {
+    const marker = (() => null) as unknown as SurfaceComponent;
+    registerSurface("trade-details", marker);
+
+    expect(getSurfaceComponent("trade-details")).toBe(marker);
+    // No component was registered for this id in this unit test's isolated module.
+    expect(getSurfaceComponent("market-deals")).toBeUndefined();
   });
 });
